@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaeser Colombia - Inteligencia de Campo</title>
+    
+    <!-- Librerías de Diseño Estáticas Limpias (Cero Markdown) -->
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css)">
+    
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f1f5f9; }
+        .kaeser-yellow { background-color: #ffd300; }
+        .kaeser-teal { background-color: #48717c; }
+        .text-kaeser-teal { color: #48717c; }
+        .drag-over { border-color: #48717c !important; background-color: #f0fdf4 !important; }
+        .wave-bar { width: 3px; height: 15px; background-color: #48717c; border-radius: 10px; display: inline-block; animation: bounce 0.8s infinite ease-in-out; }
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; height: 25px; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; height: 35px; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; height: 20px; }
+        @keyframes bounce { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1.1); } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between relative">
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast_alerta" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-[#ffd300] text-black border-2 border-black px-6 py-4 rounded-lg shadow-xl font-bold flex items-center gap-3 hidden max-w-md w-full">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="toast_texto" class="text-sm flex-grow"></span>
+        <button onclick="ocultarToast()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- CABECERA CORPORATIVA -->
+    <header class="bg-[#48717c] text-white shadow-md border-b-8 border-[#ffd300] sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-[#ffd300] text-black font-bold px-3 py-1.5 rounded text-lg tracking-wider">KAESER</div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-bold tracking-tight">Inteligencia de Campo</h1>
+                    <p class="text-xs text-gray-200">Ecosistema de Automatización de Reportes 2026</p>
+                </div>
+            </div>
+            <i class="fa-solid fa-screwdriver-wrench text-2xl text-[#ffd300]"></i>
+        </div>
+    </header>
+
+    <!-- CUERPO PRINCIPAL -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- CONFIGURACIÓN DE URL API (Solo visible si no se ha configurado) -->
+        <section id="config_api_panel" class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <div class="space-y-3">
+                <p class="text-xs font-semibold text-gray-700">⚙️ Configuración del Ecosistema de Campo (Solución 2):</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="api_script_url" placeholder="Pega aquí la URL de tu Web App de Google Apps Script (/exec)" class="flex-grow p-2 border border-gray-300 rounded text-xs outline-none">
+                    <button onclick="guardarApiUrl()" class="bg-[#48717c] hover:bg-[#395962] text-white font-bold text-xs py-2 px-4 rounded shadow transition-all outline-none">
+                        Vincular Portal
+                    </button>
+                </div>
+                <p id="api_status_msg" class="text-[10px] text-gray-400">Esta URL se guardará de forma segura en la memoria de tu navegador.</p>
+            </div>
+        </section>
+
+        <!-- PASO 1: SECCIÓN DE AUDIOS -->
+        <section class="bg-white rounded-lg shadow-md p-6 border-t-4 border-[#ffd300] space-y-4">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-microphone text-red-500"></i> Paso 1: Registrar Notas de Voz de Campo
+            </h2>
+            <p class="text-sm text-gray-500">Graba directo estilo WhatsApp de forma 100% nativa o carga tus archivos (soporta notas PTT de WhatsApp perfectamente).</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="border-2 border-gray-200 p-4 rounded-lg bg-slate-50 flex flex-col justify-between min-h-[160px] relative">
+                    <span class="font-semibold text-gray-700 text-sm"><i class="fa-solid fa-square-poll-horizontal text-[#48717c]"></i> Grabadora en Línea</span>
+                    <div id="panel_grabacion_idle" class="flex flex-col items-center justify-center py-2 space-y-2">
+                        <button onclick="iniciarGrabacionAudio()" class="bg-red-600 hover:bg-red-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg transform active:scale-95 transition-all outline-none"><i class="fa-solid fa-microphone text-xl"></i></button>
+                    </div>
+                    <div id="panel_grabacion_activo" class="hidden flex items-center justify-between bg-white border border-[#48717c] rounded-full px-4 py-2 shadow-inner">
+                        <span id="timer_grabacion" class="font-mono text-sm font-bold text-gray-700">00:00</span>
+                        <div class="flex space-x-1"><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span></div>
+                        <div class="flex space-x-2">
+                            <button onclick="cancelarGrabacionAudio()" class="text-red-500 p-2"><i class="fa-solid fa-trash-can"></i></button>
+                            <button onclick="detenerYGuardarAudio()" class="bg-[#48717c] text-white w-8 h-8 rounded-full flex items-center justify-center"><i class="fa-solid fa-check"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="drop_zone_audios" class="border-2 border-dashed border-gray-300 p-4 rounded-lg text-center bg-slate-50 cursor-pointer flex flex-col justify-center items-center relative min-h-[160px]">
+                    <input type="file" id="file_audios" multiple accept="audio/*" onchange="cargarAudiosArchivos(event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                    <i class="fa-solid fa-file-waveform text-3xl text-gray-400 mb-2"></i>
+                    <p class="text-xs font-semibold text-gray-600">O sube audios (M4A, MP3, WAV, PTT, OPUS)</p>
+                </div>
+            </div>
+
+            <div id="lista_audios_contenedor" class="hidden space-y-2 border-t pt-4">
+                <span class="font-semibold text-gray-700 text-sm">Audios Detectados (<span id="contador_audios">0</span>):</span>
+                <div id="lista_audios" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- PASO 2: SECCIÓN DE PLACAS DE IDENTIFICACIÓN -->
+        <section class="bg-white rounded-lg shadow-md p-6 border-t-4 border-amber-500 space-y-4">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-id-card text-amber-500"></i> Paso 2: Placas de Identificación (Para OCR y Tabla)
+            </h2>
+            <p class="text-sm text-gray-500">Toma una foto de la placa de los equipos revisados. La IA extraerá automáticamente la Referencia, Serie, Año y el EMR para el informe.</p>
+            
+            <div id="drop_zone_placas" class="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center bg-slate-50 cursor-pointer relative">
+                <input type="file" id="file_placas" multiple accept="image/*" onchange="cargarPlacasArchivos(event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                <i class="fa-solid fa-barcode text-4xl text-gray-400 mb-2"></i>
+                <p class="text-sm font-semibold text-gray-600">Haz clic aquí o arrastra las fotos de las placas</p>
+            </div>
+
+            <div id="lista_placas_contenedor" class="hidden space-y-2 border-t pt-4">
+                <span class="font-semibold text-gray-700 text-sm">Placas Seleccionadas:</span>
+                <div id="grid_placas" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+            </div>
+        </section>
+
+        <!-- PASO 3: SECCIÓN DE FOTOS -->
+        <section class="bg-white rounded-lg shadow-md p-6 border-t-4 border-[#48717c] space-y-4">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-image text-green-500"></i> Paso 3: Fotografías del Servicio (Ilustraciones de campo)
+            </h2>
+            <p class="text-sm text-gray-500">Carga las fotos de evidencia o inspección. El sistema las comprimirá automáticamente antes de enviarlas.</p>
+            
+            <div id="drop_zone_fotos" class="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center bg-slate-50 cursor-pointer relative">
+                <input type="file" id="file_fotos" multiple accept="image/*" onchange="cargarFotosArchivos(event)" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                <i class="fa-solid fa-cloud-arrow-up text-4xl text-gray-400 mb-2"></i>
+                <p class="text-sm font-semibold text-gray-600">Haz clic aquí o arrastra tus fotos de evidencia</p>
+            </div>
+
+            <div id="lista_fotos_contenedor" class="hidden space-y-2 border-t pt-4">
+                <span class="font-semibold text-gray-700 text-sm">Fotos de Evidencia Seleccionadas:</span>
+                <div id="grid_fotos" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+            </div>
+        </section>
+
+        <!-- ACCIÓN Y PROCESAMIENTO -->
+        <section class="text-center space-y-4">
+            <button id="btn_generar" onclick="iniciarGeneracionReporte()" class="bg-[#ffd300] hover:bg-[#e0b800] text-black font-bold text-lg px-8 py-4 rounded-lg shadow-lg w-full md:w-auto flex items-center justify-center gap-2 mx-auto">
+                <i class="fa-solid fa-file-signature"></i> GENERAR REPORTE TÉCNICO EDITABLE (GOOGLE DOC)
+            </button>
+
+            <!-- BARRA DE PROCESAMIENTO -->
+            <div id="loading_panel" class="hidden bg-white p-6 rounded-lg shadow-md max-w-md mx-auto space-y-4 border-2 border-blue-200">
+                <svg class="animate-spin h-8 w-8 text-[#48717c] mx-auto" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <div id="loading_status" class="text-sm font-bold text-gray-700 animate-pulse">Sincronizando...</div>
+                <div id="loading_details" class="text-xs text-gray-400">Procesando y generando reporte. Por favor no cierres esta pestaña...</div>
+            </div>
+
+            <!-- MODAL DE EXITO -->
+            <div id="success_panel" class="hidden bg-green-50 border-2 border-green-500 p-6 rounded-lg shadow-md max-w-lg mx-auto space-y-4 text-center">
+                <i class="fa-solid fa-circle-check text-4xl text-green-500"></i>
+                <h3 class="text-lg font-bold text-green-900">¡Informe Creado con Éxito!</h3>
+                <p class="text-sm text-green-700" id="success_message"></p>
+                <a id="success_link" href="#" target="_blank" class="inline-flex items-center gap-2 bg-[#48717c] text-white font-bold px-6 py-3 rounded-lg shadow text-sm outline-none">
+                    <i class="fa-solid fa-file-word text-lg"></i> ABRIR DOCUMENTO EDITABLE
+                </a>
+            </div>
+
+            <!-- MODAL DE ERROR -->
+            <div id="error_panel" class="hidden bg-red-50 border-2 border-red-500 p-6 rounded-lg shadow-md max-w-lg mx-auto text-center text-red-800 p-4">
+                <i class="fa-solid fa-triangle-exclamation text-3xl mb-2"></i>
+                <h3 class="font-bold text-red-900">Error al Generar Reporte</h3>
+                <p id="error_message_text" class="text-sm"></p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-gray-400 text-center py-4 text-xs border-t border-gray-700 mt-8">
+        <p>© 2026 Kaeser Compresores de Colombia S.A.S. | Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        let listaAudios = [];
+        let listaFotos = [];
+        let listaPlacas = [];
+        
+        let mediaRecorder;
+        let audioChunks = [];
+        let tInicioGrabacion;
+        let timerInterval;
+
+        window.onload = function() {
+            // Cargar API URL guardada
+            if (localStorage.getItem("kaeser_api_url")) {
+                document.getElementById("api_script_url").value = localStorage.getItem("kaeser_api_url");
+                document.getElementById("config_api_panel").classList.add("hidden"); // Ocultar si ya está configurado
+            }
+            
+            setupDragAndDrop('drop_zone_audios', 'file_audios', cargarAudiosArchivos);
+            setupDragAndDrop('drop_zone_placas', 'file_placas', cargarPlacasArchivos);
+            setupDragAndDrop('drop_zone_fotos', 'file_fotos', cargarFotosArchivos);
+        };
+
+        function guardarApiUrl() {
+            let url = document.getElementById("api_script_url").value.trim();
+            if (url === "") return alert("Pega una URL válida.");
+            localStorage.setItem("kaeser_api_url", url);
+            document.getElementById("config_api_panel").classList.add("hidden");
+            mostrarToast("Vínculo con Google Apps Script establecido.");
+        }
+
+        function mostrarToast(msg) {
+            document.getElementById("toast_texto").innerText = msg;
+            const toast = document.getElementById("toast_alerta");
+            toast.classList.remove("hidden");
+            setTimeout(() => { toast.classList.add("hidden"); }, 5000);
+        }
+        function ocultarToast() { document.getElementById("toast_alerta").classList.add("hidden"); }
+
+        function iniciarGrabacionAudio() {
+            audioChunks = [];
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                mediaRecorder = new MediaRecorder(stream, { audioBitsPerSecond: 24000 });
+                mediaRecorder.ondataavailable = e => { audioChunks.push(e.data); };
+                mediaRecorder.onstop = () => {
+                    let blob = new Blob(audioChunks, { type: 'audio/webm' });
+                    let lector = new FileReader();
+                    lector.readAsDataURL(blob);
+                    lector.onloadend = function() {
+                        listaAudios.push({
+                            nombre: "Grabación de campo " + (listaAudios.length + 1) + ".webm",
+                            bytesBase64: lector.result.split(',')[1],
+                            mime: "audio/webm",
+                            previsualizacionUrl: URL.createObjectURL(blob)
+                        });
+                        renderizarListas();
+                    };
+                };
+                mediaRecorder.start();
+                document.getElementById("panel_grabacion_idle").classList.add("hidden");
+                document.getElementById("panel_grabacion_activo").classList.remove("hidden");
+                tInicioGrabacion = Date.now();
+                timerInterval = setInterval(() => {
+                    let diff = Date.now() - tInicioGrabacion;
+                    let s = Math.floor(diff / 1000) % 60;
+                    let m = Math.floor(diff / 60000);
+                    document.getElementById("timer_grabacion").innerText = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                }, 1000);
+            }).catch(err => {
+                mostrarToast("Micrófono restringido en este navegador.");
+            });
+        }
+
+        function detenerYGuardarAudio() { if (mediaRecorder && mediaRecorder.state !== "inactive") { mediaRecorder.stop(); finalizarGrabacion(); } }
+        function cancelarGrabacionAudio() { if (mediaRecorder && mediaRecorder.state !== "inactive") { mediaRecorder.stop(); mediaRecorder.ondataavailable = null; finalizarGrabacion(); } }
+        function finalizarGrabacion() {
+            clearInterval(timerInterval);
+            document.getElementById("panel_grabacion_activo").classList.add("hidden");
+            document.getElementById("panel_grabacion_idle").classList.remove("hidden");
+            if (mediaRecorder && mediaRecorder.stream) mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        }
+
+        function eliminarAudio(idx) { listaAudios.splice(idx, 1); renderizarListas(); }
+        function eliminarFoto(idx) { listaFotos.splice(idx, 1); renderizarListas(); }
+        function eliminarPlaca(idx) { listaPlacas.splice(idx, 1); renderizarListas(); }
+
+        function cargarAudiosArchivos(e) {
+            let files = e.target.files; if (files.length === 0) return;
+            let promesas = [];
+            for (let i = 0; i < files.length; i++) {
+                let file = files[i];
+                promesas.push(new Promise((res) => {
+                    let lector = new FileReader();
+                    lector.readAsDataURL(file);
+                    lector.onloadend = function() {
+                        let base64 = lector.result.split(',')[1];
+                        let mime = file.type;
+                        if (!mime) {
+                            let nl = file.name.toLowerCase();
+                            if (nl.endsWith('.opus')) mime = 'audio/opus';
+                            else if (nl.endsWith('.ogg')) mime = 'audio/ogg';
+                            else if (nl.endsWith('.m4a')) mime = 'audio/m4a';
+                            else if (nl.indexOf('ptt') === 0 || nl.indexOf('wa') !== -1) mime = 'audio/ogg';
+                            else mime = 'audio/wav';
+                        }
+                        listaAudios.push({ nombre: file.name, bytesBase64: base64, mime: mime, previsualizacionUrl: URL.createObjectURL(file) });
+                        res();
+                    };
+                }));
+            }
+            Promise.all(promesas).then(() => { renderizarListas(); });
+        }
+
+        function cargarPlacasArchivos(e) {
+            let files = e.target.files; if (files.length === 0) return;
+            let promesas = [];
+            document.getElementById("btn_generar").classList.add("hidden");
+            document.getElementById("loading_panel").classList.remove("hidden");
+            document.getElementById("loading_status").innerText = "Procesando placas de identificación...";
+
+            for (let i = 0; i < files.length; i++) {
+                promesas.push(comprimirFoto(files[i]).then(foto => { listaPlacas.push(foto); }));
+            }
+            Promise.all(promesas).then(() => {
+                document.getElementById("loading_panel").classList.add("hidden");
+                document.getElementById("btn_generar").classList.remove("hidden");
+                renderizarListas();
+            });
+        }
+
+        function cargarFotosArchivos(e) {
+            let files = e.target.files; if (files.length === 0) return;
+            let promesas = [];
+            document.getElementById("btn_generar").classList.add("hidden");
+            document.getElementById("loading_panel").classList.remove("hidden");
+            document.getElementById("loading_status").innerText = "Optimizando fotos de evidencia...";
+
+            for (let i = 0; i < files.length; i++) {
+                promesas.push(comprimirFoto(files[i]).then(foto => { listaFotos.push(foto); }));
+            }
+            Promise.all(promesas).then(() => {
+                document.getElementById("loading_panel").classList.add("hidden");
+                document.getElementById("btn_generar").classList.remove("hidden");
+                renderizarListas();
+            });
+        }
+
+        function comprimirFoto(file) {
+            return new Promise((res) => {
+                let lector = new FileReader();
+                lector.readAsDataURL(file);
+                lector.onload = function(e) {
+                    let img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        let canvas = document.createElement('canvas');
+                        let max_dim = 800;
+                        let w = img.width, h = img.height;
+                        if (w > h ? w > max_dim : h > max_dim) {
+                            if (w > h) { h *= max_dim / w; w = max_dim; }
+                            else { w *= max_dim / h; h = max_dim; }
+                        }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        let dataUrl = canvas.toDataURL('image/jpeg', 0.50);
+                        res({ nombre: file.name.replace(/\.[^/.]+$/, "") + ".jpg", bytesBase64: dataUrl.split(',')[1], mime: "image/jpeg", previsualizacionUrl: dataUrl });
+                    };
+                };
+            });
+        }
+
+        function renderizarListas() {
+            let divA = document.getElementById("lista_audios"); divA.innerHTML = "";
+            if (listaAudios.length > 0) {
+                document.getElementById("lista_audios_contenedor").classList.remove("hidden");
+                document.getElementById("contador_audios").innerText = listaAudios.length;
+                listaAudios.forEach((audio, idx) => {
+                    divA.innerHTML += `<div class="flex items-center justify-between p-2 bg-slate-100 rounded text-xs space-x-2 border">
+                        <span class="truncate font-semibold flex-grow">${audio.nombre}</span>
+                        <audio src="${audio.previsualizacionUrl}" controls class="h-6 max-w-[150px]"></audio>
+                        <button onclick="eliminarAudio(${idx})" class="text-red-500 px-2"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>`;
+                });
+            } else document.getElementById("lista_audios_contenedor").classList.add("hidden");
+
+            let divP = document.getElementById("grid_placas"); divP.innerHTML = "";
+            if (listaPlacas.length > 0) {
+                document.getElementById("lista_placas_contenedor").classList.remove("hidden");
+                listaPlacas.forEach((placa, idx) => {
+                    divP.innerHTML += `<div class="relative border rounded bg-white overflow-hidden text-center text-[10px]">
+                        <img src="${placa.previsualizacionUrl}" class="w-full h-20 object-cover">
+                        <button onclick="eliminarPlaca(${idx})" class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full"><i class="fa-solid fa-xmark"></i></button>
+                        <div class="p-1 bg-gray-50 truncate">${placa.nombre}</div>
+                    </div>`;
+                });
+            } else document.getElementById("lista_placas_contenedor").classList.add("hidden");
+
+            let divF = document.getElementById("grid_fotos"); divF.innerHTML = "";
+            if (listaFotos.length > 0) {
+                document.getElementById("lista_fotos_contenedor").classList.remove("hidden");
+                listaFotos.forEach((foto, idx) => {
+                    divF.innerHTML += `<div class="relative border rounded bg-white overflow-hidden text-center text-[10px]">
+                        <img src="${foto.previsualizacionUrl}" class="w-full h-20 object-cover">
+                        <button onclick="eliminarFoto(${idx})" class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full"><i class="fa-solid fa-xmark"></i></button>
+                        <div class="p-1 bg-gray-50 truncate">${foto.nombre}</div>
+                    </div>`;
+                });
+            } else document.getElementById("lista_fotos_contenedor").classList.add("hidden");
+        }
+
+        const setupDragAndDrop = (idZone, inputId, processFunction) => {
+            const dropZone = document.getElementById(idZone);
+            const fileInput = document.getElementById(inputId);
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('drag-over'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    const event = { target: { files: e.dataTransfer.files } };
+                    processFunction(event);
+                }
+            });
+        };
+
+        function iniciarGeneracionReporte() {
+            let scriptUrl = localStorage.getItem("kaeser_api_url") || "";
+            if (!scriptUrl) {
+                scriptUrl = prompt("Por favor, pega la URL de tu Web App de Google Apps Script (/exec) para conectar la base de datos:");
+                if (!scriptUrl) return mostrarToast("Se requiere la URL de Apps Script.");
+                localStorage.setItem("kaeser_api_url", scriptUrl);
+            }
+
+            if (listaAudios.length === 0) return mostrarToast("Carga al menos un audio.");
+            
+            let totalChars = 0;
+            listaAudios.forEach(a => totalChars += a.bytesBase64.length);
+            listaPlacas.forEach(p => totalChars += p.bytesBase64.length);
+            listaFotos.forEach(f => totalChars += f.bytesBase64.length);
+            if (((totalChars * 0.75) / (1024 * 1024)) > 8.0) return mostrarToast("Exceso de peso acumulado.");
+
+            document.getElementById("success_panel").classList.add("hidden");
+            document.getElementById("error_panel").classList.add("hidden");
+            document.getElementById("btn_generar").classList.add("hidden");
+            document.getElementById("loading_panel").classList.remove("hidden");
+
+            // LLAMADO SEGURO A NUESTRA API DE GOOGLE APPS SCRIPT SIN PREFLIGHT
+            fetch(scriptUrl, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" }, // Evita OPTIONS preflight
+                body: JSON.stringify({ audios: listaAudios, fotos: listaFotos, placas: listaPlacas })
+            })
+            .then(response => response.json())
+            .then(res => {
+                document.getElementById("loading_panel").classList.add("hidden");
+                document.getElementById("btn_generar").classList.remove("hidden");
+                if (res.success) {
+                    document.getElementById("success_message").innerHTML = `Informe procesado con éxito para <strong>${res.cliente}</strong>.`;
+                    document.getElementById("success_link").href = res.url;
+                    document.getElementById("success_panel").classList.remove("hidden");
+                    listaAudios = []; listaFotos = []; listaPlacas = []; renderizarListas();
+                } else {
+                    document.getElementById("error_message_text").innerText = res.message;
+                    document.getElementById("error_panel").classList.remove("hidden");
+                }
+            })
+            .catch(err => {
+                document.getElementById("loading_panel").classList.add("hidden");
+                document.getElementById("btn_generar").classList.remove("hidden");
+                document.getElementById("error_message_text").innerText = "Falla de red: " + err.toString();
+                document.getElementById("error_panel").classList.remove("hidden");
+            });
+        }
+    </script>
+</body>
+</html>
